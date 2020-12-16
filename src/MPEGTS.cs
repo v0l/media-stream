@@ -252,11 +252,31 @@ Extension             : {AdaptationFieldExtension}";
             /// </summary>
             public int CalculatedLength =>
                 1 /* Flags */ +
-                (Flags.HasFlag(AdaptationFieldFlags.PCR) ? 5 : 0) +
-                (Flags.HasFlag(AdaptationFieldFlags.OPCR) ? 5 : 0) +
+                (Flags.HasFlag(AdaptationFieldFlags.PCR) ? 6 : 0) +
+                (Flags.HasFlag(AdaptationFieldFlags.OPCR) ? 6 : 0) +
                 (Flags.HasFlag(AdaptationFieldFlags.SplicingPoint) ? 1 : 0) +
                 (Flags.HasFlag(AdaptationFieldFlags.TransportPrivateData) ? 1 + (TransportPrivateData?.Length ?? 0) : 0) +
                 (Flags.HasFlag(AdaptationFieldFlags.AdaptationFieldExtension) ? 1 + AdaptationFieldExtension.Length : 0);
+
+            private static long? ReadPTS(ReadOnlySequence<byte> buf) 
+            {
+                var sr = new SequenceReader<byte>(buf);
+
+                Span<byte> tmpNum = stackalloc byte[6];
+                if (sr.TryCopyTo(tmpNum))
+                {
+                    long pcrBase = (long)tmpNum[0] << 25
+                        | (long)tmpNum[1] << 17
+                        | (long)tmpNum[2] << 9
+                        | (long)tmpNum[3] << 1
+                        | (long)(tmpNum[4] & 0x80) >> 7;
+                    long ext = (long)(tmpNum[4] & 0x01) << 8
+                        | (long)tmpNum[5];
+
+                    return (pcrBase * 300) + ext;
+                }
+                return null;
+            }
 
             /// <summary>
             /// Read the adaption field for this packet
@@ -276,14 +296,17 @@ Extension             : {AdaptationFieldExtension}";
 
                     if (ret.Length > 0 && sr.TryRead(out byte afFlags))
                     {
+                        ret.Flags = (AdaptationFieldFlags)afFlags;
+
                         if (ret.Flags.HasFlag(AdaptationFieldFlags.PCR))
                         {
-                            if (sr.TryReadBigEndian(out int low) && sr.TryRead(out byte high))
+                            var pcr = ReadPTS(af.Slice(sr.Position));
+                            if(pcr != null) 
                             {
-                                var pcr = ((long)high << 32) & low;
-                                ret.PCR = pcr;
+                                ret.PCR = pcr.Value;
+                                sr.Advance(6);
                             }
-                            else
+                            else 
                             {
                                 return default;
                             }
@@ -291,12 +314,13 @@ Extension             : {AdaptationFieldExtension}";
 
                         if (ret.Flags.HasFlag(AdaptationFieldFlags.OPCR))
                         {
-                            if (sr.TryReadBigEndian(out int low) && sr.TryRead(out byte high))
+                            var opcr = ReadPTS(af.Slice(sr.Position));
+                            if(opcr != null) 
                             {
-                                var pcr = ((long)high << 32) & low;
-                                ret.OPCR = pcr;
+                                ret.OPCR = opcr.Value;
+                                sr.Advance(6);
                             }
-                            else
+                            else 
                             {
                                 return default;
                             }
@@ -421,6 +445,8 @@ Extension             : {AdaptationFieldExtension}";
             public AdaptationField AdaptationField { get; set; }
 
             public byte[] Payload { get; set; }
+
+            public ReadOnlySequence<byte> OriginalData { get; set; }
 
             public override string ToString()
             {
@@ -579,7 +605,10 @@ Payload             : {Payload?.Length ?? 0} bytes{(IsPESPayload ? " [PES]" : st
                     //try to parse a packet starting at sp
                     var packetData = buf.Slice(sp.Value, PacketLength);
 
-                    yield return (sp.Value, TSPacket.Parse(packetData));
+                    var pkt = TSPacket.Parse(packetData);
+                    pkt.OriginalData = packetData;
+
+                    yield return (sp.Value, pkt);
 
                     var nextMsgPos = buf.GetPosition(PacketLength, sp.Value);
                     buf = buf.Slice(nextMsgPos);
