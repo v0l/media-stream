@@ -10,7 +10,7 @@ namespace test
 {
     public class MPEGTS_Tests
     {
-        public Task PipeTS(Stream fs, Func<MediaStreams.MPEGTS.TSPacket, Task> handle) 
+        public Task PipeStream(Stream fs, Func<PipeReader, Task> handle) 
         {
             var pipe = new Pipe();
             var reader = Task.Run(async () =>
@@ -18,10 +18,7 @@ namespace test
                 var r = pipe.Reader;
                 try
                 {
-                    await foreach (var pkt in MediaStreams.MPEGTS.TryReadPackets(r))
-                    {
-                        await handle(pkt);
-                    }
+                    await handle(r);
                 }
                 catch (Exception ex)
                 {
@@ -90,16 +87,35 @@ namespace test
             using var fsin = new FileStream(fpath, FileMode.Open, FileAccess.Read);
             using var fsout = new FileStream(fpath_tst, FileMode.Create);
             var mem = MemoryPool<byte>.Shared.Rent(MediaStreams.MPEGTS.PacketLength);
-            await PipeTS(fsin, async (pkt) => 
+            await PipeStream(fsin, async (pr) => 
             {
-                pkt.Write(mem.Memory.Span);
-                await fsout.WriteAsync(mem.Memory.Slice(0, MediaStreams.MPEGTS.PacketLength));
+                await foreach (var pkt in MediaStreams.MPEGTS.TryReadPackets(pr))
+                {
+                    //pkt.Write(mem.Memory.Span);
+                    //await fsout.WriteAsync(mem.Memory.Slice(0, MediaStreams.MPEGTS.PacketLength));
+                }
             });
             fsin.Close();
             fsout.Close();
 
             //compare the files
             await CompareFiles(fpath, fpath_tst);
+        }
+
+        [Fact]
+        public async Task ReadM3U()
+        {
+            const string fpath = @"C:\Users\Kieran\Downloads\tv_channels_kieran@harkin.me_plus.m3u";
+
+            using var fsin = new FileStream(fpath, FileMode.Open, FileAccess.Read);
+            await PipeStream(fsin, async (pr) => 
+            {
+                await foreach(var entry in MediaStreams.M3UReader.ReadPlaylist(pr))
+                {
+                    Console.WriteLine($"{entry.Tag}:{entry.Value}");
+                }
+            });
+            fsin.Close();
         }
     }
 }
