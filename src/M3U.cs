@@ -31,7 +31,7 @@ namespace MediaStreams
         /// Very dirty :) 
         /// </summary>
         /// <returns></returns>
-        public string Value => $"{Duration}{(Properties?.Count > 0 ? $" {(string.Join(", ", Properties.Select(a => $"{a.Key}=\"{a.Value}\"")))}" : string.Empty)},{Title}{Environment.NewLine}{Path}";
+        public string Value => $"{Duration}{(Properties?.Count > 0 ? $" {(string.Join(" ", Properties.Select(a => $"{a.Key}=\"{a.Value}\"")))}" : string.Empty)},{Title}{Environment.NewLine}{Path}";
     }
 
     public class Generic : Entry
