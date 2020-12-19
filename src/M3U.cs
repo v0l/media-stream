@@ -96,7 +96,8 @@ namespace MediaStreams
                 {
                     //check for CR
                     var sr = new SequenceReader<byte>(line);
-                    if(sr.TryPeek(line.Length - 1, out byte cr) && cr == CR) 
+                    sr.Advance(line.Length - 1);
+                    if(sr.TryPeek(out byte cr) && cr == CR) 
                     {
                         line = line.Slice(0, line.Length - 1);
                     }
@@ -111,13 +112,13 @@ namespace MediaStreams
             var tagend = line.PositionOf(TagDelimiter);
             if(tagend != null) 
             {
-                var tag = Encoding.UTF8.GetString(line.Slice(0, tagend.Value));
-                var value = Encoding.UTF8.GetString(line.Slice(line.GetPosition(1, tagend.Value)));
+                var tag = Encoding.UTF8.GetString(line.Slice(0, tagend.Value).ToArray());
+                var value = Encoding.UTF8.GetString(line.Slice(line.GetPosition(1, tagend.Value)).ToArray());
                 return new TagLine(tag, value);
             } 
             else 
             {
-                var tag = Encoding.UTF8.GetString(line);
+                var tag = Encoding.UTF8.GetString(line.ToArray());
                 return new TagLine(tag, null);
             }
         }
@@ -150,7 +151,7 @@ namespace MediaStreams
                 ret.Duration = duration;
             }
             ret.Title = propsAndTitle[1];
-            ret.Path = new Uri(Encoding.UTF8.GetString(link.Data));
+            ret.Path = new Uri(Encoding.UTF8.GetString(link.Data.ToArray()));
 
             return ret;
         }
