@@ -164,7 +164,7 @@ Payload             : {Payload?.Length ?? 0} bytes{(IsPESPayload ? " [PES]" : st
                         Continuity = (byte)(hv & 0x0f)
                     };
 
-                    if (pkt.HasAdaptionField)
+                    if (pkt.HasAdaptionField && !pkt.TransportError)
                     {
                         var af = AdaptationField.Parse(header.Slice(sr.Position));
                         if (!af.Equals(default))

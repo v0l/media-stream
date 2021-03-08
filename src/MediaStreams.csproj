@@ -8,7 +8,7 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <RepositoryUrl>https://github.com/v0l/media-stream</RepositoryUrl>
-    <Version>1.0.1-dev.1</Version>
+    <Version>1.0.1-dev.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
