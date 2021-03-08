@@ -121,10 +121,10 @@ Payload             : {Payload?.Length ?? 0} bytes{(IsPESPayload ? " [PES]" : st
 
             public void Validate()
             {
-                if (!((int)AdaptationFieldControl >= 1 && (int)AdaptationFieldControl <= 3))
+                /*if (!((int)AdaptationFieldControl >= 1 && (int)AdaptationFieldControl <= 3))
                 {
                     throw new Exception("Invalid AFC");
-                }
+                }*/
                 if (Pid > 8191)
                 {
                     throw new Exception("Invalid PID");

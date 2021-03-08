@@ -4,7 +4,10 @@
     <TargetFrameworks>netcoreapp3.1;net5</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <RepositoryUrl>https://github.com/v0l/media-stream</RepositoryUrl>
+    <Version>1.0.1-dev.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

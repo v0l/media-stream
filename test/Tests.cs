@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -77,6 +78,21 @@ namespace test
             Assert.True(ha == hb);
         }
 
+        public static byte[] StringToByteArray(string hex)
+        {
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
+        }
+
+        [Fact]
+        public void ParseBroken()
+        {
+            var pktData = StringToByteArray("4738A80D6C61B22792CDBC9029FE6B69BB86059738BEFC0DDD48E8368FCF72D3CE2703CA21D136B3CBB2D4B8258745904E21F4D97503FB8AAC0DA90701692F19C16664CD6BABAD63543629B9E44304BAC49C7ED958B36A4C6297D22B3CD60E0A07B00AEAF39D3043E1A43617999FC75B36A96D558DA4C52E5B2713671CC1FF3049C72FEB77EC101697C01B04D78CB643B9FFE5F2B227DC26E7B8B29E04B1E7B747010018166104753F90C0B8CC8916BA2DCABCBD8EE96223C7654788");
+            var pkt = MPEGTS.Packet.Parse(new ReadOnlySequence<byte>(pktData));
+        }
+
         [Fact]
         /// <summary>
         /// Read/Write a file and check the contents are identical
@@ -92,7 +108,7 @@ namespace test
             var mem = MemoryPool<byte>.Shared.Rent(MediaStreams.MPEGTS.PacketLength);
             await PipeStream(fsin, async (pr) =>
             {
-                await foreach (var pkt in MediaStreams.MPEGTS.TryReadPackets(pr))
+                await foreach (var pkt in MPEGTSReader.TryReadPackets(pr))
                 {
                     //pkt.Write(mem.Memory.Span);
                     //await fsout.WriteAsync(mem.Memory.Slice(0, MediaStreams.MPEGTS.PacketLength));
