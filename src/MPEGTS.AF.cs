@@ -24,12 +24,12 @@ namespace MediaStreams
             public override string ToString()
             {
                 return $@"
-Flags                 : {Flags}
-PCR                   : {PCR}
-OPCR                  : {OPCR}
-SpliceCountdown       : {SpliceCountdown}
-TransportPrivateData  : {TransportPrivateData?.Length}
-Extension             : {AdaptationFieldExtension}";
+  Flags                 : {Flags}
+  PCR                   : {PCR}
+  OPCR                  : {OPCR}
+  SpliceCountdown       : {SpliceCountdown}
+  TransportPrivateData  : {TransportPrivateData?.Length}
+  Extension             : {AdaptationFieldExtension}";
             }
 
             public void Validate()

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MediaStreams
 {
@@ -91,6 +93,59 @@ namespace MediaStreams
             public ushort PacketLen { get; set; }
 
             public Memory<byte> Data { get; set; }
+        }
+
+        public class PESReader 
+        {
+            private class PESStream 
+            {
+                public PESStream(MPEGTS.Packet pkt) 
+                {
+                    Continuity = pkt.Continuity;
+                    Packets.Add(pkt);
+                }
+
+                public byte Continuity { get; set; }
+                public List<MPEGTS.Packet> Packets { get; } = new List<Packet>();
+            }
+
+            private Dictionary<ushort, PESStream> TransportStreams { get; } = new Dictionary<ushort, PESStream>();
+
+            public delegate Task PacketHandler(ushort pid, byte[] data);
+            public event PacketHandler OnPacket = (p, d) => Task.CompletedTask;
+
+            public PESReader() 
+            {
+
+            }
+
+            public async Task PushPacket(MPEGTS.Packet pkt) 
+            {
+                //track from PES start
+                if(!TransportStreams.ContainsKey(pkt.Pid) && pkt.PayloadUnitStart) 
+                {
+                    TransportStreams.Add(pkt.Pid, new PESStream(pkt));
+                    await OnPacket(pkt.Pid, pkt.Payload);
+                }
+                else if(TransportStreams.TryGetValue(pkt.Pid, out PESStream stream) && pkt.HasPayload)
+                {
+                    if(pkt.PayloadUnitStart && pkt.Continuity == 0 && stream.Continuity == 15) 
+                    {
+                        stream.Continuity = pkt.Continuity;
+                    } 
+                    else if(pkt.Continuity -1 == stream.Continuity)
+                    {
+                        stream.Continuity = pkt.Continuity;
+                    } 
+                    else 
+                    {
+                        //out of order
+                        //throw new Exception("Out of order pkt");
+                    }
+                    await OnPacket(pkt.Pid, pkt.Payload);
+                    stream.Packets.Add(pkt);
+                }
+            }
         }
     }
 }
